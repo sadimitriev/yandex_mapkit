@@ -7,6 +7,7 @@ public class YandexSearch: NSObject, FlutterPlugin {
   private let methodChannel: FlutterMethodChannel!
   private let searchManager: YMKSearchManager!
   private var suggestSessionsById: [Int:YMKSearchSuggestSession] = [:]
+  private var searchSession: YMKSearchSession?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
@@ -117,8 +118,113 @@ public class YandexSearch: NSObject, FlutterPlugin {
     case "cancelSuggestSession":
       cancelSuggestSession(call)
       result(nil)
+    case "onSearchElementTap":
+      searchDetail(call)
+      result("test")
     default:
       result(FlutterMethodNotImplemented)
     }
   }
+    
+    func searchDetail(_ call: FlutterMethodCall) {
+        
+        let BOUNDING_BOX = YMKBoundingBox(
+                southWest: YMKPoint(latitude: 54.176283, longitude: 48.189940),
+                northEast: YMKPoint(latitude: 54.376283, longitude: 48.389940))
+        let geometry = YMKGeometry(boundingBox: BOUNDING_BOX)
+        let SEARCH_OPTIONS = YMKSearchOptions()
+
+        let responseHandler = {(searchResponse: YMKSearchResponse?, error: Error?) -> Void in
+            if let response = searchResponse {
+                self.onSearchResponse(response)
+              } else if error != nil {
+                
+              }
+        }
+        
+        guard let args = call.arguments else {
+            return
+        }
+        if let myArgs = args as? [String: Any], let query = myArgs["query"] as? String {
+            searchSession = self.searchManager?.submit(
+                withText: query,
+                geometry: geometry,
+                searchOptions: SEARCH_OPTIONS,
+                responseHandler: responseHandler)
+        }
+    }
+    
+    func onSearchResponse(_ response: YMKSearchResponse) {
+
+        for searchResult in response.collection.children {
+            guard let obj = searchResult.obj else {
+                continue
+            }
+
+            guard let objMetadata = obj.metadataContainer.getItemOf(YMKSearchToponymObjectMetadata.self) as? YMKSearchToponymObjectMetadata else {
+                continue
+            }
+
+            let x = objMetadata.balloonPoint.latitude
+            let y = objMetadata.balloonPoint.longitude
+
+            var ymkPoint = YMKPoint(latitude: x, longitude: y)
+
+            let address = objMetadata.address
+
+            let formattedAddress = address.formattedAddress
+            let postalCode:String = address.postalCode ?? ""
+            let additionalInfo = address.additionalInfo ?? "none"
+
+            var country:String = ""
+            var region:String = ""
+            var street:String = ""
+            var locality:String = ""
+            var house:String = ""
+
+            address.components.forEach {
+                let value = $0.name
+
+                $0.kinds.forEach {
+                    let kind = YMKSearchComponentKind(rawValue: UInt(truncating: $0))
+
+                    switch kind {
+
+                    case .country:
+                        country = value
+                        print("country: \(value)")
+
+                    case .region:
+                        region = value
+                        print("region: \(value)")
+
+                    case .locality:
+                        locality = value
+                        print("locality: \(value)")
+
+                    case .street:
+                        street = value
+                        print("street: \(value)")
+                        
+                    case .house:
+                        house = ", \(value)"
+                        print("house number: \(value)")
+
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            let arguments: [String:Any?] = [
+                "country": country,
+                "region": region,
+                "locality": locality,
+                "street": street,
+                "postalCode": postalCode
+            ]
+            
+            self.methodChannel.invokeMethod("onSuggestListenerResponseTest", arguments: arguments)
+        }
+    }
 }

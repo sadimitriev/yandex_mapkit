@@ -2,8 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
-import 'package:yandex_mapkit_example/examples/widgets/control_button.dart';
 import 'package:yandex_mapkit_example/examples/widgets/map_page.dart';
+
+class QueryModel {
+  int id;
+  String name;
+
+  QueryModel({this.id, this.name});
+
+  QueryModel.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    name = json['name'];
+  }
+}
 
 class SearchPage extends MapPage {
   const SearchPage() : super('Search example');
@@ -21,7 +32,7 @@ class _SearchExample extends StatefulWidget {
 
 class _SearchExampleState extends State<_SearchExample> {
   TextEditingController queryController = TextEditingController();
-  String response = '';
+  List<QueryModel> response = List<QueryModel>();
 
   @override
   Widget build(BuildContext context) {
@@ -43,23 +54,42 @@ class _SearchExampleState extends State<_SearchExample> {
                         controller: queryController,
                       ),
                     ),
-                    ControlButton(
-                      onPressed: () {
+                    InkWell(
+                      child: Text("Query"),
+                      onTap: () {
                         querySuggestions(queryController.text);
                       },
-                      title: 'Query'
-                    ),
+                    )
                   ],
                 ),
                 const SizedBox(height: 20),
                 const Text('Response:'),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(response)
-                    ),
-                  ],
+                ListView.builder(
+                  physics: NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: response.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: EdgeInsets.symmetric(vertical: 10),
+                      color: Colors.black12,
+                      child: InkWell(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text('${response[index].name}'),
+                        ),
+                        onTap: () => YandexSearch.onSearchElementTap(
+                          response[index].name,
+                          (dynamic value) {
+
+                          }
+                        ),
+                      ),
+                    );
+
+                    return ListTile(
+                      title: Text('${response[index].name}'),
+                    );
+                  },
                 ),
               ]
             )
@@ -78,7 +108,11 @@ class _SearchExampleState extends State<_SearchExample> {
       true,
       (List<SuggestItem> suggestItems) {
         setState(() {
-          response = suggestItems.map((SuggestItem item) => item.title).join('\n');
+          response = [];
+          suggestItems.asMap().forEach((key, value) {
+            response.add(QueryModel(id: key, name: value.searchText));
+          });
+          print(response);
         });
       }
     );

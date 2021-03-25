@@ -7,6 +7,7 @@ class YandexSearch {
 
   static int _nextCallbackId = 0;
   static final Map<int, SuggestSessionCallback> _suggestSessionsById = Map<int, SuggestSessionCallback>();
+  static final Map<int, dynamic> _suggestObjectSessionsById = Map<int, dynamic>();
 
   static Future<CancelSuggestCallback> getSuggestions(
     String address,
@@ -49,6 +50,9 @@ class YandexSearch {
       case 'onSuggestListenerRemove':
         _onSuggestListenerRemove(call.arguments);
         break;
+      case 'onSuggestListenerResponseTest':
+        _onQuerySearchResponse(call.arguments);
+        break;
       default:
         throw MissingPluginException();
     }
@@ -86,7 +90,33 @@ class YandexSearch {
     _cancelSuggestSession(listenerId);
   }
 
+  static void _onQuerySearchResponse(dynamic arguments) {
+    _suggestObjectSessionsById[0](arguments);
+    _cancelSuggestSessionTest(0);
+  }
+
   static void _onSuggestListenerError(dynamic arguments) {
     _cancelSuggestSession(arguments['listenerId']);
+  }
+
+  static Future onSearchElementTap(
+      String query,
+      SuggestSessionCallback callback
+    ) async {
+    _suggestObjectSessionsById[0] = callback;
+
+    await _channel.invokeMethod<dynamic>(
+        'onSearchElementTap',
+        <String, String>{
+          'query': query
+        }
+    );
+    return () => _cancelSuggestSessionTest(0);
+  }
+
+  static Future<void> _cancelSuggestSessionTest(int listenerId) async {
+    if (_suggestSessionsById.containsKey(listenerId)) {
+      _suggestSessionsById.remove(listenerId);
+    }
   }
 }
