@@ -45,24 +45,24 @@ class MainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('YandexMap examples')),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: Container(
+      body: SingleChildScrollView(
+        child: Column(
+          children: <Widget>[
+            Container(
+              height: 300,
               padding: const EdgeInsets.all(8),
               child: const YandexMap()
-            )
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _allPages.length,
+            ),
+            ListView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: 100,
               itemBuilder: (_, int index) => ListTile(
-                title: Text(_allPages[index].title),
-                onTap: () => _pushPage(context, _allPages[index]),
+                title: Text("test $index)"),
               ),
             )
-          )
-        ]
+          ]
+        ),
       )
     );
   }

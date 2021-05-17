@@ -181,6 +181,10 @@ public class YandexSearch: NSObject, FlutterPlugin {
             var street:String = ""
             var locality:String = ""
             var house:String = ""
+            var province:String = ""
+            var area:String = ""
+            var district:String = ""
+            
 
             address.components.forEach {
                 let value = $0.name
@@ -192,23 +196,35 @@ public class YandexSearch: NSObject, FlutterPlugin {
 
                     case .country:
                         country = value
-                        print("country: \(value)")
+                        //print("country: \(value)")
 
                     case .region:
                         region = value
-                        print("region: \(value)")
+                        //print("region: \(value)")
 
                     case .locality:
                         locality = value
-                        print("locality: \(value)")
+                        //print("locality: \(value)")
 
                     case .street:
                         street = value
-                        print("street: \(value)")
+                        //print("street: \(value)")
                         
                     case .house:
-                        house = ", \(value)"
-                        print("house number: \(value)")
+                        house = value
+                        //print("house number: \(value)")
+                        
+                    case .province:
+                        province = value
+                        //print("province: \(value)")
+                    
+                    case .area:
+                        area = value
+                        //print("area: \(value)")
+
+                    case .district:
+                        district = value
+                        //print("district: \(value)")
 
                     default:
                         break
@@ -221,7 +237,13 @@ public class YandexSearch: NSObject, FlutterPlugin {
                 "region": region,
                 "locality": locality,
                 "street": street,
-                "postalCode": postalCode
+                "postalCode": postalCode,
+                "area": area,
+                "house": house,
+                "lat": "\(x)",
+                "lon": "\(y)",
+                "province": province,
+                "district": district
             ]
             
             self.methodChannel.invokeMethod("onSuggestListenerResponseTest", arguments: arguments)

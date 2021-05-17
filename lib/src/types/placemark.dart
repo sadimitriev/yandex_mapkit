@@ -7,7 +7,7 @@ class Placemark {
     this.onTap,
   });
 
-  final Point point;
+  Point point;
   final PlacemarkStyle style;
   final ArgumentCallback<Point> onTap;
 }
