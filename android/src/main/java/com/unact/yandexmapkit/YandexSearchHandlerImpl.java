@@ -4,8 +4,11 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
+import com.yandex.mapkit.geometry.Geometry;
 import com.yandex.mapkit.geometry.Point;
 import com.yandex.mapkit.geometry.BoundingBox;
+import com.yandex.mapkit.map.GeoObjectSelectionMetadata;
+import com.yandex.mapkit.search.Response;
 import com.yandex.mapkit.search.SuggestItem;
 import com.yandex.mapkit.search.SuggestType;
 import com.yandex.mapkit.search.SearchFactory;
@@ -13,7 +16,14 @@ import com.yandex.mapkit.search.SearchManagerType;
 import com.yandex.mapkit.search.SuggestOptions;
 import com.yandex.mapkit.search.SearchManager;
 import com.yandex.mapkit.search.SuggestSession;
+import com.yandex.mapkit.search.SearchOptions;
+import com.yandex.mapkit.search.Session;
+import com.yandex.mapkit.search.ToponymObjectMetadata;
 import com.yandex.runtime.Error;
+import com.yandex.runtime.any.Collection;
+import com.yandex.mapkit.search.ToponymObjectMetadata;
+import com.yandex.mapkit.search.Address;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,15 +35,114 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 
-public class YandexSearchHandlerImpl implements MethodCallHandler {
+public class YandexSearchHandlerImpl implements MethodCallHandler, Session.SearchListener {
   private MethodChannel methodChannel;
   private Map<Integer, SuggestSession> suggestSessionsById = new HashMap<>();
   private final SearchManager searchManager;
+  private Session searchSession;
 
   public YandexSearchHandlerImpl(Context context, MethodChannel channel) {
     SearchFactory.initialize(context);
     methodChannel = channel;
     searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED);
+  }
+
+  @Override
+  public void onSearchError(Error error) {
+
+  }
+
+  @Override
+  public void onSearchResponse(Response response) {
+
+    ToponymObjectMetadata data = response.getCollection().getChildren().get(0)
+            .getObj().getMetadataContainer().getItem(ToponymObjectMetadata.class);
+
+    final double x = data.getBalloonPoint().getLatitude();
+    final double y = data.getBalloonPoint().getLongitude();
+    final String postalCode = data.getAddress().getPostalCode();
+
+    String country = "";
+    String region = "";
+    String street = "";
+    String locality = "";
+    String house = "";
+    String province = "";
+    String area = "";
+    final String district = "";
+
+    for (Address.Component component : data.getAddress().getComponents()) {
+      String value = component.getName();
+      for (Address.Component.Kind kind : component.getKinds()) {
+
+        switch (kind.name()) {
+          case "COUNTRY":
+            country = value;
+            break;
+          case "PROVINCE":
+            province = value;
+            break;
+          case "REGION":
+            region = value;
+            break;
+          case "AREA":
+            area = value;
+            break;
+          case "LOCALITY":
+            locality = value;
+            break;
+          case "STREET":
+            street = value;
+            break;
+          case "HOUSE":
+            house = value;
+            break;
+        }
+      }
+    }
+
+    final String finalCountry = country;
+    final String finalRegion = region;
+    final String finalLocality = locality;
+    final String finalStreet = street;
+    final String finalArea = area;
+    final String finalHouse = house;
+    final String finalProvince = province;
+    Map<String, String> arguments = new HashMap<String, String>()
+    {
+      {
+        put("country", finalCountry);
+        put("region", finalRegion);
+        put("locality", finalLocality);
+        put("street", finalStreet);
+        put("postalCode", postalCode);
+        put("area", finalArea);
+        put("house", finalHouse);
+        put("lat", String.valueOf(x));
+        put("lon", String.valueOf(y));
+        put("province", finalProvince);
+        put("district", district);
+      }
+    };
+
+    Log.d("list", arguments.toString());
+
+    methodChannel.invokeMethod("onSuggestListenerResponseTest", arguments);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void searchDetail(MethodCall call) {
+    Map<String, Object> args = ((Map<String, Object>) call.arguments);
+    final String query = ((String) args.get("query")).toString();
+
+    Geometry point = Geometry.fromPoint(new Point(54.176283, 48.189940));
+
+    searchSession = searchManager.submit(
+      query,
+      point,
+      new SearchOptions(),
+      this
+    );
   }
 
   @SuppressWarnings("unchecked")
@@ -87,6 +196,10 @@ public class YandexSearchHandlerImpl implements MethodCallHandler {
         break;
       case "cancelSuggestSession":
         cancelSuggestSession(call);
+        result.success(null);
+        break;
+      case "onSearchElementTap":
+        searchDetail(call);
         result.success(null);
         break;
       default:
