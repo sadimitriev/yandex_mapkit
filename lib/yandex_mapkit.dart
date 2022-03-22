@@ -1,4 +1,4 @@
-library yandex_mapkit;
+library yandex_mapkit_last;
 
 import 'dart:async';
 import 'dart:core';
